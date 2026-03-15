@@ -3,6 +3,8 @@
 import { useUserStore } from "@/stores/user-store";
 import { getXPProgress } from "@/lib/xp";
 import { LEVEL_THRESHOLDS } from "@/lib/constants";
+import { RewardsShop } from "@/components/vault/rewards-shop";
+import { StreakBadge } from "@/components/ui/streak-badge";
 
 export default function VaultPage() {
   const user = useUserStore((s) => s.user);
@@ -17,11 +19,7 @@ export default function VaultPage() {
 
   return (
     <div>
-      <h2
-        className="text-2xl mb-6 font-display"
-      >
-        Vault
-      </h2>
+      <h2 className="text-2xl mb-6 font-display">Vault</h2>
 
       {/* Level Card */}
       <div className="bg-surface border border-border rounded-card p-6 mb-4">
@@ -79,24 +77,15 @@ export default function VaultPage() {
           </p>
         </div>
         <div className="bg-surface border border-border rounded-card p-4 text-center">
-          <p className="font-mono text-xl font-medium">
-            {user.streak_current}
-          </p>
+          <StreakBadge count={user.streak_current} shields={user.streak_shields} />
           <p className="text-[10px] text-foreground-secondary uppercase tracking-wider mt-1">
             Streak
           </p>
         </div>
       </div>
 
-      {/* Rewards placeholder */}
-      <div className="bg-surface border border-border rounded-card p-6 text-center">
-        <p className="text-foreground-secondary text-sm">
-          Sklep nagrod
-        </p>
-        <p className="text-foreground-secondary text-xs mt-1">
-          Wkrotce dostepny
-        </p>
-      </div>
+      {/* Rewards Shop */}
+      <RewardsShop userCoins={user.coins} userId={user.id} />
     </div>
   );
 }

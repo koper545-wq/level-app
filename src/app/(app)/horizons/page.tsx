@@ -1,21 +1,16 @@
-"use client";
+import { HorizonsView } from "@/components/horizons/horizons-view";
+import { createClient } from "@/lib/supabase/server";
 
-export default function HorizonsPage() {
-  return (
-    <div>
-      <h2
-        className="text-2xl mb-6 font-display"
-      >
-        Horizons
-      </h2>
-      <div className="text-center py-16">
-        <p className="text-foreground-secondary text-sm">
-          Planer kwartalny i tygodniowy
-        </p>
-        <p className="text-foreground-secondary text-xs mt-1">
-          Wkrotce dostepny
-        </p>
-      </div>
-    </div>
-  );
+export default async function HorizonsPage() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: goals } = await supabase
+    .from("goals")
+    .select("*, area:areas(*)")
+    .eq("user_id", user!.id)
+    .eq("status", "active")
+    .order("is_boss", { ascending: false });
+
+  return <HorizonsView initialGoals={goals ?? []} />;
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Header } from "@/components/ui/header";
 import { StoreInitializer } from "@/components/ui/store-initializer";
+import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
 
 export default async function AppLayout({
   children,
@@ -32,6 +33,8 @@ export default async function AppLayout({
       .order("sort_order"),
   ]);
 
+  const needsOnboarding = profile && !profile.onboarding_completed;
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <StoreInitializer
@@ -39,11 +42,18 @@ export default async function AppLayout({
         areas={areas ?? []}
         tasks={tasks ?? []}
       />
-      <div className="max-w-content mx-auto px-4 md:px-8">
-        <Header />
-        <main>{children}</main>
-      </div>
-      <BottomNav />
+
+      {needsOnboarding ? (
+        <OnboardingGate />
+      ) : (
+        <>
+          <div className="max-w-content mx-auto px-4 md:px-8">
+            <Header />
+            <main>{children}</main>
+          </div>
+          <BottomNav />
+        </>
+      )}
     </div>
   );
 }

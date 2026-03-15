@@ -6,6 +6,7 @@ import { useUserStore } from "@/stores/user-store";
 import { calculateTaskXP } from "@/lib/xp";
 import { coinsForXP } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { checkAndUpdateStreak } from "@/lib/streaks";
 import { TaskCard } from "./task-card";
 
 interface Props {
@@ -49,6 +50,16 @@ export function FocusTask({ task, onComplete }: Props) {
         reason: `task_complete:${task.difficulty}`,
       })
       .then();
+
+    // Update streak
+    const { newStreak } = await checkAndUpdateStreak(user.id);
+    useUserStore.getState().updateStreak(newStreak);
+
+    // Update goal progress if this task belongs to a goal
+    if (task.parent_goal_id) {
+      const { useGoalStore } = await import("@/stores/goal-store");
+      useGoalStore.getState().updateProgress(task.parent_goal_id);
+    }
 
     onComplete(total);
   }
