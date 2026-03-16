@@ -42,11 +42,12 @@ export const XP_BONUS = {
 export const DEFAULT_AREAS = [
   { name: "SEATED", color: "#3D4FE0" },
   { name: "RESTAURACJE", color: "#C4472A" },
-  { name: "PAPIER & PIKSEL", color: "#5C7A3E" },
+  { name: "WEDDING BUILDER", color: "#5C7A3E" },
   { name: "ZDROWIE", color: "#2E7D52" },
   { name: "RELACJE", color: "#B8956A" },
   { name: "FINANSE", color: "#C49A1A" },
   { name: "MARKA", color: "#404040" },
+  { name: "BARRY", color: "#8B5CF6" },
 ];
 
 // Streak milestones

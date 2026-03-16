@@ -30,7 +30,7 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
   const [title, setTitle] = useState("");
   const [areaId, setAreaId] = useState<string | null>(defaultAreaId ?? null);
   const [difficulty, setDifficulty] = useState<TaskDifficulty>("medium");
-  const [scheduledDate, setScheduledDate] = useState(today);
+  const [scheduledDate, setScheduledDate] = useState<string | null>(today);
   const [recurrence, setRecurrence] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +52,7 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
       title: title.trim(),
       area_id: areaId,
       difficulty,
-      scheduled_date: scheduledDate,
+      scheduled_date: scheduledDate ?? undefined,
     });
 
     // Set recurrence on the created task
@@ -124,19 +124,30 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
               type="button"
               onClick={() => dateInputRef.current?.showPicker()}
               className={`text-[11px] px-3 py-1.5 rounded-full transition-colors min-h-[36px] ${
-                scheduledDate !== today && scheduledDate !== tomorrowDate
+                scheduledDate !== null && scheduledDate !== today && scheduledDate !== tomorrowDate
                   ? "bg-foreground text-background"
                   : "text-foreground-secondary border border-border"
               }`}
             >
-              {scheduledDate !== today && scheduledDate !== tomorrowDate
+              {scheduledDate !== null && scheduledDate !== today && scheduledDate !== tomorrowDate
                 ? getDateLabel(scheduledDate)
                 : "Wybierz dzien"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduledDate(null)}
+              className={`text-[11px] px-3 py-1.5 rounded-full transition-colors min-h-[36px] ${
+                scheduledDate === null
+                  ? "bg-foreground text-background"
+                  : "text-foreground-secondary border border-border"
+              }`}
+            >
+              TBD
             </button>
             <input
               ref={dateInputRef}
               type="date"
-              value={scheduledDate}
+              value={scheduledDate ?? ""}
               min={today}
               onChange={(e) => {
                 if (e.target.value) setScheduledDate(e.target.value);

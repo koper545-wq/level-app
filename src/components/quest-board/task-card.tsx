@@ -182,6 +182,15 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
               >
                 Wybierz dzien
               </button>
+              <button
+                onClick={() => {
+                  rescheduleTask(task.id, null);
+                  setShowPostpone(false);
+                }}
+                className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
+              >
+                TBD
+              </button>
               <input
                 ref={dateRef}
                 type="date"

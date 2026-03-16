@@ -244,11 +244,12 @@ begin
   insert into public.areas (user_id, name, color, sort_order) values
     (new.id, 'SEATED', '#3D4FE0', 0),
     (new.id, 'RESTAURACJE', '#C4472A', 1),
-    (new.id, 'PAPIER & PIKSEL', '#5C7A3E', 2),
+    (new.id, 'WEDDING BUILDER', '#5C7A3E', 2),
     (new.id, 'ZDROWIE', '#2E7D52', 3),
     (new.id, 'RELACJE', '#B8956A', 4),
     (new.id, 'FINANSE', '#C49A1A', 5),
-    (new.id, 'MARKA', '#404040', 6);
+    (new.id, 'MARKA', '#404040', 6),
+    (new.id, 'BARRY', '#8B5CF6', 7);
 
   return new;
 end;

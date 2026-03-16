@@ -12,13 +12,13 @@ interface TaskState {
     title: string;
     area_id?: string | null;
     difficulty?: TaskDifficulty;
-    scheduled_date?: string;
+    scheduled_date?: string | null;
     parent_goal_id?: string | null;
   }) => Promise<Task | null>;
 
   completeTask: (taskId: string) => Promise<Task | null>;
   postponeTask: (taskId: string) => void;
-  rescheduleTask: (taskId: string, date: string) => void;
+  rescheduleTask: (taskId: string, date: string | null) => void;
   setFocusTask: (taskId: string) => void;
   deleteTask: (taskId: string) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
@@ -31,6 +31,7 @@ interface TaskState {
   // Computed
   todayTasks: () => Task[];
   overdueTasks: () => Task[];
+  backlogTasks: () => Task[];
   focusTask: () => Task | undefined;
 }
 
@@ -57,7 +58,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         difficulty,
         xp_value: xpValue,
         coins_value: coinsValue,
-        scheduled_date: scheduled_date || today,
+        scheduled_date: scheduled_date === undefined ? today : scheduled_date,
         parent_goal_id: parent_goal_id || null,
         sort_order: get().tasks.length,
       })
@@ -282,6 +283,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
           t.scheduled_date < today
       )
       .sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
+  },
+
+  backlogTasks: () => {
+    return get()
+      .tasks.filter((t) => t.status === "pending" && t.scheduled_date === null)
+      .sort((a, b) => a.sort_order - b.sort_order);
   },
 
   focusTask: () => get().tasks.find((t) => t.is_focus && t.status === "pending"),

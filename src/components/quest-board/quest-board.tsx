@@ -10,6 +10,7 @@ import { XPToast } from "./xp-toast";
 import { OverdueTasks } from "./overdue-tasks";
 import { BonusQuestBanner } from "./bonus-quest-banner";
 import { HabitList } from "@/components/habits/habit-list";
+import { BacklogTasks } from "./backlog-tasks";
 import { MilestoneOverlay } from "@/components/ui/milestone-overlay";
 import { MAX_VISIBLE_TASKS } from "@/lib/constants";
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -40,6 +41,12 @@ export function QuestBoard() {
           t.scheduled_date < today
       )
       .sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
+  }, [tasks]);
+
+  const backlogTasks = useMemo(() => {
+    return tasks
+      .filter((t) => t.status === "pending" && t.scheduled_date === null)
+      .sort((a, b) => a.sort_order - b.sort_order);
   }, [tasks]);
 
   const focusTask = useMemo(
@@ -124,6 +131,9 @@ export function QuestBoard() {
       <div className="mt-6">
         <QuickAdd />
       </div>
+
+      {/* Backlog / TBD tasks */}
+      <BacklogTasks tasks={backlogTasks} onComplete={handleTaskComplete} />
 
       {/* Habits */}
       <HabitList />
