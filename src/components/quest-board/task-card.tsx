@@ -19,12 +19,18 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
   const addSubtask = useTaskStore((s) => s.addSubtask);
   const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
   const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const deleteTask = useTaskStore((s) => s.deleteTask);
   const [confirming, setConfirming] = useState(false);
   const [showPostpone, setShowPostpone] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -36,6 +42,12 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [confirming]);
+
+  useEffect(() => {
+    if (editing) {
+      setTimeout(() => editInputRef.current?.focus(), 50);
+    }
+  }, [editing]);
 
   function handleClick() {
     if (confirming) {
@@ -49,6 +61,25 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
   function handlePostpone() {
     postponeTask(task.id);
     setShowPostpone(false);
+  }
+
+  function handleStartEdit() {
+    setEditTitle(task.title);
+    setEditing(true);
+    setShowPostpone(false);
+  }
+
+  function handleSaveEdit() {
+    if (!editTitle.trim()) return;
+    if (editTitle.trim() !== task.title) {
+      updateTask(task.id, { title: editTitle.trim() });
+    }
+    setEditing(false);
+  }
+
+  function handleDelete() {
+    deleteTask(task.id);
+    setConfirmDelete(false);
   }
 
   // Count subtasks progress
@@ -101,28 +132,48 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            {task.recurrence_rule && !confirming && (
-              <span className="text-[10px] text-foreground-secondary" title="Powtarzajace">♻️</span>
-            )}
-            <p className={`text-sm truncate ${variant === "focus" ? "font-medium" : ""}`}>
-              {confirming ? (
-                <span className="text-success font-medium">Kliknij ponownie</span>
-              ) : (
-                task.title
-              )}
-            </p>
-          </div>
-          {subtasksTotal > 0 && !confirming && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-12 h-1 bg-border rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-accent rounded-full transition-all"
-                  style={{ width: `${subtasksTotal > 0 ? (subtasksDone / subtasksTotal) * 100 : 0}%` }}
-                />
+          {editing ? (
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}
+              className="flex items-center gap-1.5"
+            >
+              <input
+                ref={editInputRef}
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") setEditing(false); }}
+                className="flex-1 text-sm bg-transparent border-b border-accent focus:outline-none py-0.5"
+              />
+              <button type="submit" className="text-[10px] text-accent font-medium px-1.5">OK</button>
+              <button type="button" onClick={() => setEditing(false)} className="text-[10px] text-foreground-secondary px-1">✕</button>
+            </form>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5">
+                {task.recurrence_rule && !confirming && (
+                  <span className="text-[10px] text-foreground-secondary" title="Powtarzajace">♻️</span>
+                )}
+                <p className={`text-sm truncate ${variant === "focus" ? "font-medium" : ""}`}>
+                  {confirming ? (
+                    <span className="text-success font-medium">Kliknij ponownie</span>
+                  ) : (
+                    task.title
+                  )}
+                </p>
               </div>
-              <span className="text-[10px] text-foreground-secondary font-mono">{subtasksDone}/{subtasksTotal}</span>
-            </div>
+              {subtasksTotal > 0 && !confirming && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="w-12 h-1 bg-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent rounded-full transition-all"
+                      style={{ width: `${subtasksTotal > 0 ? (subtasksDone / subtasksTotal) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-foreground-secondary font-mono">{subtasksDone}/{subtasksTotal}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -174,43 +225,86 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-3 flex flex-wrap gap-2">
-              <button
-                onClick={handlePostpone}
-                className="text-[11px] px-3 py-1.5 rounded-full bg-foreground text-background min-h-[32px]"
-              >
-                Jutro
-              </button>
-              <button
-                onClick={() => {
-                  setTimeout(() => dateRef.current?.showPicker(), 50);
-                }}
-                className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
-              >
-                Wybierz dzien
-              </button>
-              <button
-                onClick={() => {
-                  rescheduleTask(task.id, null);
-                  setShowPostpone(false);
-                }}
-                className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
-              >
-                TBD
-              </button>
-              <input
-                ref={dateRef}
-                type="date"
-                min={today}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    rescheduleTask(task.id, e.target.value);
+            <div className="px-4 pb-3 space-y-2">
+              {/* Reschedule row */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handlePostpone}
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-foreground text-background min-h-[32px]"
+                >
+                  Jutro
+                </button>
+                <button
+                  onClick={() => {
+                    setTimeout(() => dateRef.current?.showPicker(), 50);
+                  }}
+                  className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
+                >
+                  Wybierz dzien
+                </button>
+                <button
+                  onClick={() => {
+                    rescheduleTask(task.id, null);
                     setShowPostpone(false);
-                  }
-                }}
-                className="sr-only"
-                tabIndex={-1}
-              />
+                  }}
+                  className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
+                >
+                  TBD
+                </button>
+                <input
+                  ref={dateRef}
+                  type="date"
+                  min={today}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      rescheduleTask(task.id, e.target.value);
+                      setShowPostpone(false);
+                    }
+                  }}
+                  className="sr-only"
+                  tabIndex={-1}
+                />
+              </div>
+              {/* Edit / Delete row */}
+              <div className="flex gap-2 pt-1 border-t border-border/50">
+                <button
+                  onClick={handleStartEdit}
+                  className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary hover:text-foreground transition-colors min-h-[32px] flex items-center gap-1"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                  Edytuj
+                </button>
+                {confirmDelete ? (
+                  <>
+                    <button
+                      onClick={handleDelete}
+                      className="text-[11px] px-3 py-1.5 rounded-full bg-red-500 text-white min-h-[32px]"
+                    >
+                      Na pewno usun
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-[11px] px-3 py-1.5 rounded-full border border-border text-foreground-secondary min-h-[32px]"
+                    >
+                      Anuluj
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="text-[11px] px-3 py-1.5 rounded-full border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors min-h-[32px] flex items-center gap-1"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Usun
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

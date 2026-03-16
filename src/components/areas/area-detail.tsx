@@ -28,6 +28,8 @@ export function AreaDetail({ areaId }: Props) {
   const addSubtask = useTaskStore((s) => s.addSubtask);
   const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
   const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const deleteTask = useTaskStore((s) => s.deleteTask);
 
   const [tab, setTab] = useState<"active" | "done">("active");
   const [editing, setEditing] = useState(false);
@@ -36,6 +38,9 @@ export function AreaDetail({ areaId }: Props) {
   const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [newSubtaskText, setNewSubtaskText] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
 
   const pendingTasks = useMemo(
     () => tasks.filter((t) => t.area_id === areaId && t.status === "pending"),
@@ -280,7 +285,30 @@ export function AreaDetail({ areaId }: Props) {
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
-                        {confirmingTaskId === task.id ? (
+                        {editingTaskId === task.id ? (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              if (!editTaskTitle.trim()) return;
+                              if (editTaskTitle.trim() !== task.title) {
+                                updateTask(task.id, { title: editTaskTitle.trim() });
+                              }
+                              setEditingTaskId(null);
+                            }}
+                            className="flex items-center gap-1.5"
+                          >
+                            <input
+                              type="text"
+                              value={editTaskTitle}
+                              onChange={(e) => setEditTaskTitle(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Escape") setEditingTaskId(null); }}
+                              autoFocus
+                              className="flex-1 text-sm bg-transparent border-b border-accent focus:outline-none py-0.5"
+                            />
+                            <button type="submit" className="text-[10px] text-accent font-medium px-1.5">OK</button>
+                            <button type="button" onClick={() => setEditingTaskId(null)} className="text-[10px] text-foreground-secondary px-1">✕</button>
+                          </form>
+                        ) : confirmingTaskId === task.id ? (
                           <span className="text-sm text-success font-medium">Kliknij ponownie</span>
                         ) : (
                           <>
@@ -316,15 +344,63 @@ export function AreaDetail({ areaId }: Props) {
                           </>
                         )}
                       </div>
-                      {confirmingTaskId !== task.id && task.savings_amount > 0 && (
+                      {confirmingTaskId !== task.id && editingTaskId !== task.id && task.savings_amount > 0 && (
                         <span className="text-[10px] font-mono text-[#C49A1A] font-medium flex-shrink-0">
                           {task.savings_amount} PLN
                         </span>
                       )}
-                      {confirmingTaskId !== task.id && (
+                      {confirmingTaskId !== task.id && editingTaskId !== task.id && (
                         <span className="text-xs font-mono text-foreground-secondary flex-shrink-0">
                           +{task.xp_value}
                         </span>
+                      )}
+                      {/* Edit & Delete buttons */}
+                      {confirmingTaskId !== task.id && editingTaskId !== task.id && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditTaskTitle(task.title);
+                              setEditingTaskId(task.id);
+                            }}
+                            className="p-1 text-foreground-secondary/40 hover:text-foreground transition-colors"
+                            aria-label="Edytuj zadanie"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </button>
+                          {confirmDeleteTaskId === task.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  deleteTask(task.id);
+                                  setConfirmDeleteTaskId(null);
+                                }}
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-red-500 text-white"
+                              >
+                                Usun
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteTaskId(null)}
+                                className="text-[10px] text-foreground-secondary px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteTaskId(task.id)}
+                              className="p-1 text-foreground-secondary/40 hover:text-red-500 transition-colors"
+                              aria-label="Usun zadanie"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -424,7 +500,7 @@ export function AreaDetail({ areaId }: Props) {
               completedTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card opacity-60"
+                  className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card opacity-60 group"
                 >
                   <div className="flex-shrink-0 w-7 h-7 rounded-full bg-border flex items-center justify-center">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -441,6 +517,36 @@ export function AreaDetail({ areaId }: Props) {
                         month: "short",
                       })}
                     </span>
+                  )}
+                  {confirmDeleteTaskId === task.id ? (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          deleteTask(task.id);
+                          setConfirmDeleteTaskId(null);
+                        }}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-red-500 text-white"
+                      >
+                        Usun
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteTaskId(null)}
+                        className="text-[10px] text-foreground-secondary px-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteTaskId(task.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-foreground-secondary/40 hover:text-red-500 transition-all flex-shrink-0"
+                      aria-label="Usun zadanie"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
                   )}
                 </div>
               ))
