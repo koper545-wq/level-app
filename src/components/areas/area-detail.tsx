@@ -25,11 +25,17 @@ export function AreaDetail({ areaId }: Props) {
   const goals = useGoalStore((s) => s.goals);
   const completeTask = useTaskStore((s) => s.completeTask);
 
+  const addSubtask = useTaskStore((s) => s.addSubtask);
+  const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
+  const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
+
   const [tab, setTab] = useState<"active" | "done">("active");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
   const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [newSubtaskText, setNewSubtaskText] = useState("");
 
   const pendingTasks = useMemo(
     () => tasks.filter((t) => t.area_id === areaId && t.status === "pending"),
@@ -247,57 +253,159 @@ export function AreaDetail({ areaId }: Props) {
                 Brak aktywnych zadan
               </p>
             ) : (
-              pendingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card"
-                >
-                  <button
-                    onClick={() => handleTaskClick(task.id)}
-                    className={`flex-shrink-0 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-                      confirmingTaskId === task.id
-                        ? "border-success bg-success/20 scale-110"
-                        : "border-border hover:border-accent active:bg-accent/20"
-                    }`}
-                    aria-label={confirmingTaskId === task.id ? "Potwierdz" : "Ukoncz"}
+              pendingTasks.map((task) => {
+                const subtasksDone = task.subtasks?.filter((s) => s.is_done).length ?? 0;
+                const subtasksTotal = task.subtasks?.length ?? 0;
+                const isExpanded = expandedTaskId === task.id;
+
+                return (
+                  <div
+                    key={task.id}
+                    className="bg-surface border border-border rounded-card overflow-hidden"
                   >
-                    {confirmingTaskId === task.id && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-success">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    {confirmingTaskId === task.id ? (
-                      <span className="text-sm text-success font-medium">Kliknij ponownie</span>
-                    ) : (
-                      <>
-                        <span className="text-sm truncate block">{task.title}</span>
-                        {task.scheduled_date && (
-                          <span className="text-[10px] text-foreground-secondary">
-                            {(() => {
-                              const today = new Date().toISOString().split("T")[0];
-                              const tomorrow = new Date();
-                              tomorrow.setDate(tomorrow.getDate() + 1);
-                              const tomorrowStr = tomorrow.toISOString().split("T")[0];
-                              if (task.scheduled_date === today) return "Dzisiaj";
-                              if (task.scheduled_date === tomorrowStr) return "Jutro";
-                              if (task.scheduled_date < today) return "Zalegly";
-                              const d = new Date(task.scheduled_date + "T00:00:00");
-                              return d.toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
-                            })()}
-                          </span>
+                    <div className="flex items-center gap-3 p-3">
+                      <button
+                        onClick={() => handleTaskClick(task.id)}
+                        className={`flex-shrink-0 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                          confirmingTaskId === task.id
+                            ? "border-success bg-success/20 scale-110"
+                            : "border-border hover:border-accent active:bg-accent/20"
+                        }`}
+                        aria-label={confirmingTaskId === task.id ? "Potwierdz" : "Ukoncz"}
+                      >
+                        {confirmingTaskId === task.id && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-success">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
                         )}
-                      </>
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        {confirmingTaskId === task.id ? (
+                          <span className="text-sm text-success font-medium">Kliknij ponownie</span>
+                        ) : (
+                          <>
+                            <span className="text-sm truncate block">{task.title}</span>
+                            <div className="flex items-center gap-2">
+                              {task.scheduled_date && (
+                                <span className="text-[10px] text-foreground-secondary">
+                                  {(() => {
+                                    const today = new Date().toISOString().split("T")[0];
+                                    const tomorrow = new Date();
+                                    tomorrow.setDate(tomorrow.getDate() + 1);
+                                    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+                                    if (task.scheduled_date === today) return "Dzisiaj";
+                                    if (task.scheduled_date === tomorrowStr) return "Jutro";
+                                    if (task.scheduled_date < today) return "Zalegly";
+                                    const d = new Date(task.scheduled_date + "T00:00:00");
+                                    return d.toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+                                  })()}
+                                </span>
+                              )}
+                              {subtasksTotal > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-10 h-1 bg-border rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-accent rounded-full transition-all"
+                                      style={{ width: `${subtasksTotal > 0 ? (subtasksDone / subtasksTotal) * 100 : 0}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] text-foreground-secondary font-mono">{subtasksDone}/{subtasksTotal}</span>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {confirmingTaskId !== task.id && task.savings_amount > 0 && (
+                        <span className="text-[10px] font-mono text-[#C49A1A] font-medium flex-shrink-0">
+                          {task.savings_amount} PLN
+                        </span>
+                      )}
+                      {confirmingTaskId !== task.id && (
+                        <span className="text-xs font-mono text-foreground-secondary flex-shrink-0">
+                          +{task.xp_value}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Subtask toggle */}
+                    {confirmingTaskId !== task.id && (
+                      <button
+                        onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                        className="w-full px-3 py-1.5 text-[10px] text-foreground-secondary hover:text-foreground border-t border-border transition-colors flex items-center justify-center gap-1"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}>
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                        {subtasksTotal > 0 ? `Podzadania (${subtasksDone}/${subtasksTotal})` : "Dodaj podzadania"}
+                      </button>
                     )}
+
+                    {/* Subtask list */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-3 pb-3 space-y-1">
+                            {task.subtasks?.map((sub) => (
+                              <div key={sub.id} className="flex items-center gap-2 group">
+                                <button
+                                  onClick={() => toggleSubtask(task.id, sub.id)}
+                                  className={`flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center ${
+                                    sub.is_done
+                                      ? "border-success bg-success text-white"
+                                      : "border-border hover:border-accent"
+                                  }`}
+                                >
+                                  {sub.is_done && (
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                </button>
+                                <span className={`text-xs flex-1 ${sub.is_done ? "line-through text-foreground-secondary" : ""}`}>
+                                  {sub.title}
+                                </span>
+                                <button
+                                  onClick={() => deleteSubtask(task.id, sub.id)}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 text-foreground-secondary/30 hover:text-red-500 transition-all"
+                                >
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!newSubtaskText.trim()) return;
+                                addSubtask(task.id, newSubtaskText.trim());
+                                setNewSubtaskText("");
+                              }}
+                              className="flex items-center gap-2 pt-1"
+                            >
+                              <span className="text-foreground-secondary text-xs">+</span>
+                              <input
+                                type="text"
+                                value={newSubtaskText}
+                                onChange={(e) => setNewSubtaskText(e.target.value)}
+                                placeholder="Dodaj podzadanie..."
+                                className="flex-1 text-xs bg-transparent placeholder:text-foreground-secondary/50 focus:outline-none"
+                              />
+                            </form>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  {confirmingTaskId !== task.id && (
-                    <span className="text-xs font-mono text-foreground-secondary flex-shrink-0">
-                      +{task.xp_value}
-                    </span>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </motion.div>
         ) : (
