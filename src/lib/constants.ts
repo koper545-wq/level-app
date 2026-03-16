@@ -48,6 +48,7 @@ export const DEFAULT_AREAS = [
   { name: "FINANSE", color: "#C49A1A" },
   { name: "MARKA", color: "#404040" },
   { name: "BARRY", color: "#8B5CF6" },
+  { name: "MSC", color: "#0EA5E9" },
 ];
 
 // Streak milestones

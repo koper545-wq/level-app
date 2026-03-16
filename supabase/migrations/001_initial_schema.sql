@@ -249,7 +249,8 @@ begin
     (new.id, 'RELACJE', '#B8956A', 4),
     (new.id, 'FINANSE', '#C49A1A', 5),
     (new.id, 'MARKA', '#404040', 6),
-    (new.id, 'BARRY', '#8B5CF6', 7);
+    (new.id, 'BARRY', '#8B5CF6', 7),
+    (new.id, 'MSC', '#0EA5E9', 8);
 
   return new;
 end;
