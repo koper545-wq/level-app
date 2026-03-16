@@ -1,11 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { useGoalStore } from "@/stores/goal-store";
 import { GoalCard } from "./goal-card";
 import { MAX_QUARTERLY_GOALS } from "@/lib/constants";
 
 export function QuarterlyGoals() {
-  const activeGoals = useGoalStore((s) => s.activeGoals());
+  const goals = useGoalStore((s) => s.goals);
+
+  const activeGoals = useMemo(
+    () =>
+      goals
+        .filter((g) => g.status === "active")
+        .sort((a, b) => {
+          if (a.is_boss && !b.is_boss) return -1;
+          if (!a.is_boss && b.is_boss) return 1;
+          return 0;
+        }),
+    [goals]
+  );
 
   if (activeGoals.length === 0) {
     return (

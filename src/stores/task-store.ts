@@ -18,12 +18,19 @@ interface TaskState {
 
   completeTask: (taskId: string) => Promise<Task | null>;
   postponeTask: (taskId: string) => void;
+  rescheduleTask: (taskId: string, date: string) => void;
   setFocusTask: (taskId: string) => void;
   deleteTask: (taskId: string) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
 
+  // Subtasks
+  addSubtask: (taskId: string, title: string) => Promise<void>;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+  deleteSubtask: (taskId: string, subtaskId: string) => void;
+
   // Computed
   todayTasks: () => Task[];
+  overdueTasks: () => Task[];
   focusTask: () => Task | undefined;
 }
 
@@ -130,6 +137,24 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       .then();
   },
 
+  rescheduleTask: (taskId, date) => {
+    const tasks = get().tasks;
+    set({
+      tasks: tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, scheduled_date: date, is_focus: false }
+          : t
+      ),
+    });
+
+    const supabase = createClient();
+    supabase
+      .from("tasks")
+      .update({ scheduled_date: date, is_focus: false })
+      .eq("id", taskId)
+      .then();
+  },
+
   setFocusTask: (taskId) => {
     const tasks = get().tasks;
     set({
@@ -176,6 +201,64 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     supabase.from("tasks").update(updates).eq("id", taskId).then();
   },
 
+  addSubtask: async (taskId, title) => {
+    const supabase = createClient();
+    const task = get().tasks.find((t) => t.id === taskId);
+    const sortOrder = task?.subtasks?.length ?? 0;
+
+    const { data: subtask } = await supabase
+      .from("subtasks")
+      .insert({ task_id: taskId, title, sort_order: sortOrder })
+      .select()
+      .single();
+
+    if (subtask) {
+      set({
+        tasks: get().tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, subtasks: [...(t.subtasks ?? []), subtask] }
+            : t
+        ),
+      });
+    }
+  },
+
+  toggleSubtask: (taskId, subtaskId) => {
+    const task = get().tasks.find((t) => t.id === taskId);
+    const subtask = task?.subtasks?.find((s) => s.id === subtaskId);
+    if (!subtask) return;
+
+    const newDone = !subtask.is_done;
+    set({
+      tasks: get().tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              subtasks: t.subtasks?.map((s) =>
+                s.id === subtaskId ? { ...s, is_done: newDone } : s
+              ),
+            }
+          : t
+      ),
+    });
+
+    const supabase = createClient();
+    supabase.from("subtasks").update({ is_done: newDone }).eq("id", subtaskId).then();
+  },
+
+  deleteSubtask: (taskId, subtaskId) => {
+    set({
+      tasks: get().tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, subtasks: t.subtasks?.filter((s) => s.id !== subtaskId) }
+          : t
+      ),
+    });
+
+    const supabase = createClient();
+    supabase.from("subtasks").delete().eq("id", subtaskId).then();
+  },
+
   todayTasks: () => {
     const today = new Date().toISOString().split("T")[0];
     return get()
@@ -187,6 +270,18 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         if (!a.is_focus && b.is_focus) return 1;
         return a.sort_order - b.sort_order;
       });
+  },
+
+  overdueTasks: () => {
+    const today = new Date().toISOString().split("T")[0];
+    return get()
+      .tasks.filter(
+        (t) =>
+          t.status === "pending" &&
+          t.scheduled_date !== null &&
+          t.scheduled_date < today
+      )
+      .sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
   },
 
   focusTask: () => get().tasks.find((t) => t.is_focus && t.status === "pending"),

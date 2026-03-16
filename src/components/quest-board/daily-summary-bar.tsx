@@ -17,7 +17,7 @@ export function DailySummaryBar({ completedToday }: Props) {
   const { currentLevel, progressPercent } = getXPProgress(user.xp_total);
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 bg-surface/80 backdrop-blur-sm border-t border-border md:bottom-0 z-40">
+    <div className="fixed left-0 right-0 bg-surface/80 backdrop-blur-sm border-t border-border z-40" style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
       <div className="max-w-content mx-auto px-4 py-2 flex items-center justify-between text-xs">
         {/* XP today */}
         <div className="flex items-center gap-1.5">

@@ -1,18 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/stores/user-store";
 import { useTaskStore } from "@/stores/task-store";
 import { useTheme } from "@/hooks/use-theme";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/notifications";
+import { isCalendarConnected, disconnectCalendar } from "@/lib/google-calendar";
+import { useSearchParams } from "next/navigation";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useUserStore((s) => s.user);
   const tasks = useTaskStore((s) => s.tasks);
   const { theme, setTheme } = useTheme();
   const [exporting, setExporting] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushEnabled);
+    if (user) {
+      isCalendarConnected(user.id).then(setCalendarConnected);
+    }
+    if (searchParams.get("calendar") === "connected") {
+      setCalendarConnected(true);
+    }
+  }, [user, searchParams]);
+
+  async function handleTogglePush() {
+    setPushLoading(true);
+    if (pushEnabled) {
+      const ok = await unsubscribeFromPush();
+      if (ok) setPushEnabled(false);
+    } else {
+      const ok = await subscribeToPush();
+      if (ok) setPushEnabled(true);
+    }
+    setPushLoading(false);
+  }
 
   async function handleLogout() {
     const supabase = createClient();
@@ -86,6 +115,69 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="p-4 bg-surface border border-border rounded-card">
+          <p className="text-xs text-foreground-secondary uppercase tracking-wider mb-3">
+            Powiadomienia
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm">Push notifications</p>
+              <p className="text-[10px] text-foreground-secondary">
+                Bonus questy, przypomnienia o streaku
+              </p>
+            </div>
+            <button
+              onClick={handleTogglePush}
+              disabled={pushLoading}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                pushEnabled ? "bg-accent" : "bg-border"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  pushEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Google Calendar */}
+        <div className="p-4 bg-surface border border-border rounded-card">
+          <p className="text-xs text-foreground-secondary uppercase tracking-wider mb-3">
+            Google Calendar
+          </p>
+          {calendarConnected ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-success">Polaczony</p>
+                <p className="text-[10px] text-foreground-secondary">
+                  Taski synchronizuja sie z kalendarzem
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (user) {
+                    await disconnectCalendar(user.id);
+                    setCalendarConnected(false);
+                  }
+                }}
+                className="text-xs text-red-500 border border-red-500/30 px-3 py-1.5 rounded-card"
+              >
+                Rozlacz
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/api/calendar/auth"
+              className="inline-block text-xs bg-accent text-white px-4 py-2 rounded-card font-medium"
+            >
+              Polacz z Google Calendar
+            </a>
+          )}
         </div>
 
         {/* Stats */}

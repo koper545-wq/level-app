@@ -1,8 +1,18 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useAreaStore } from "@/stores/area-store";
 import { useTaskStore } from "@/stores/task-store";
+import { useGoalStore } from "@/stores/goal-store";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { QuickAdd } from "@/components/quest-board/quick-add";
+
+const AREA_COLORS = [
+  "#3D4FE0", "#C4472A", "#5C7A3E", "#2E7D52", "#B8956A",
+  "#C49A1A", "#404040", "#8B5CF6", "#EC4899", "#0EA5E9",
+  "#F97316", "#14B8A6",
+];
 
 interface Props {
   areaId: string;
@@ -10,7 +20,38 @@ interface Props {
 
 export function AreaDetail({ areaId }: Props) {
   const area = useAreaStore((s) => s.getAreaById(areaId));
+  const updateArea = useAreaStore((s) => s.updateArea);
   const tasks = useTaskStore((s) => s.tasks);
+  const goals = useGoalStore((s) => s.goals);
+  const completeTask = useTaskStore((s) => s.completeTask);
+
+  const [tab, setTab] = useState<"active" | "done">("active");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("");
+  const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
+
+  const pendingTasks = useMemo(
+    () => tasks.filter((t) => t.area_id === areaId && t.status === "pending"),
+    [tasks, areaId]
+  );
+
+  const completedTasks = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.area_id === areaId && t.status === "done")
+        .sort(
+          (a, b) =>
+            new Date(b.completed_at || 0).getTime() -
+            new Date(a.completed_at || 0).getTime()
+        ),
+    [tasks, areaId]
+  );
+
+  const areaGoals = useMemo(
+    () => goals.filter((g) => g.area_id === areaId && g.status === "active"),
+    [goals, areaId]
+  );
 
   if (!area) {
     return (
@@ -20,54 +61,285 @@ export function AreaDetail({ areaId }: Props) {
     );
   }
 
-  const pendingTasks = tasks.filter(
-    (t) => t.area_id === areaId && t.status === "pending"
-  );
+  function startEditing() {
+    setEditName(area!.name);
+    setEditColor(area!.color);
+    setEditing(true);
+  }
+
+  function saveEditing() {
+    if (!editName.trim()) return;
+    updateArea(areaId, { name: editName.trim(), color: editColor });
+    setEditing(false);
+  }
+
+  function handleTaskClick(taskId: string) {
+    if (confirmingTaskId === taskId) {
+      setConfirmingTaskId(null);
+      completeTask(taskId);
+    } else {
+      setConfirmingTaskId(taskId);
+      setTimeout(() => setConfirmingTaskId((prev) => (prev === taskId ? null : prev)), 2500);
+    }
+  }
 
   return (
     <div>
       <Link
         href="/areas"
-        className="text-sm text-foreground-secondary hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground transition-colors py-2"
       >
         &larr; Obszary
       </Link>
 
-      <div className="flex items-center gap-3 mt-4 mb-6">
-        <div
-          className="w-4 h-4 rounded-full"
-          style={{ backgroundColor: area.color }}
-        />
-        <h2
-          className="text-2xl font-display"
-        >
-          {area.name}
-        </h2>
-      </div>
-
-      {pendingTasks.length === 0 ? (
-        <p className="text-sm text-foreground-secondary">
-          Brak aktywnych zadan w tym obszarze
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {pendingTasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card"
-            >
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: area.color }}
-              />
-              <span className="text-sm flex-1">{task.title}</span>
-              <span className="text-xs font-mono text-foreground-secondary">
-                +{task.xp_value} XP
-              </span>
+      {/* Area header */}
+      {editing ? (
+        <div className="mt-2 mb-6 p-4 bg-surface border border-border rounded-card space-y-4">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium block mb-1">
+              Nazwa
+            </label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full bg-background border border-border rounded-card px-3 py-2 text-sm focus:outline-none focus:border-accent"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium block mb-2">
+              Kolor
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {AREA_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setEditColor(c)}
+                  className={`w-8 h-8 rounded-full transition-all ${
+                    editColor === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : ""
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={saveEditing}
+              className="flex-1 text-xs bg-accent text-white py-2 rounded-card font-medium"
+            >
+              Zapisz
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="flex-1 text-xs text-foreground-secondary border border-border py-2 rounded-card"
+            >
+              Anuluj
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 mt-2 mb-6">
+          <div
+            className="w-4 h-4 rounded-full"
+            style={{ backgroundColor: area.color }}
+          />
+          <h2 className="text-2xl font-display">{area.name}</h2>
+          <button
+            onClick={startEditing}
+            className="p-1.5 text-foreground-secondary hover:text-foreground transition-colors"
+            aria-label="Edytuj obszar"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </button>
+          <span className="text-xs text-foreground-secondary ml-auto font-mono">
+            {pendingTasks.length} aktywne &middot; {completedTasks.length} skonczone
+          </span>
         </div>
       )}
+
+      {/* Quick add for this area */}
+      <div className="mb-6 p-3 bg-surface border border-border rounded-card">
+        <QuickAdd defaultAreaId={areaId} />
+      </div>
+
+      {/* Goals for this area */}
+      {areaGoals.length > 0 && (
+        <div className="mb-6">
+          <p className="text-[10px] uppercase tracking-wider text-foreground-secondary mb-2 font-medium">
+            Cele
+          </p>
+          <div className="space-y-2">
+            {areaGoals.map((goal) => (
+              <div
+                key={goal.id}
+                className="p-3 bg-surface border border-border rounded-card"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {goal.is_boss && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+                      BOSS
+                    </span>
+                  )}
+                  <span className="text-sm font-medium">{goal.title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${goal.progress_percent}%`,
+                        backgroundColor: area.color,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-mono text-foreground-secondary">
+                    {goal.progress_percent}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tabs: Active / Done */}
+      <div className="flex gap-1 bg-surface border border-border rounded-card p-1 mb-4">
+        <button
+          onClick={() => setTab("active")}
+          className={`flex-1 text-xs py-2 rounded-card transition-colors font-medium ${
+            tab === "active"
+              ? "bg-foreground text-background"
+              : "text-foreground-secondary"
+          }`}
+        >
+          Aktywne ({pendingTasks.length})
+        </button>
+        <button
+          onClick={() => setTab("done")}
+          className={`flex-1 text-xs py-2 rounded-card transition-colors font-medium ${
+            tab === "done"
+              ? "bg-foreground text-background"
+              : "text-foreground-secondary"
+          }`}
+        >
+          Skonczone ({completedTasks.length})
+        </button>
+      </div>
+
+      {/* Task list */}
+      <AnimatePresence mode="wait">
+        {tab === "active" ? (
+          <motion.div
+            key="active"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-2"
+          >
+            {pendingTasks.length === 0 ? (
+              <p className="text-sm text-foreground-secondary py-8 text-center">
+                Brak aktywnych zadan
+              </p>
+            ) : (
+              pendingTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card"
+                >
+                  <button
+                    onClick={() => handleTaskClick(task.id)}
+                    className={`flex-shrink-0 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                      confirmingTaskId === task.id
+                        ? "border-success bg-success/20 scale-110"
+                        : "border-border hover:border-accent active:bg-accent/20"
+                    }`}
+                    aria-label={confirmingTaskId === task.id ? "Potwierdz" : "Ukoncz"}
+                  >
+                    {confirmingTaskId === task.id && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-success">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    {confirmingTaskId === task.id ? (
+                      <span className="text-sm text-success font-medium">Kliknij ponownie</span>
+                    ) : (
+                      <>
+                        <span className="text-sm truncate block">{task.title}</span>
+                        {task.scheduled_date && (
+                          <span className="text-[10px] text-foreground-secondary">
+                            {(() => {
+                              const today = new Date().toISOString().split("T")[0];
+                              const tomorrow = new Date();
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              const tomorrowStr = tomorrow.toISOString().split("T")[0];
+                              if (task.scheduled_date === today) return "Dzisiaj";
+                              if (task.scheduled_date === tomorrowStr) return "Jutro";
+                              if (task.scheduled_date < today) return "Zalegly";
+                              const d = new Date(task.scheduled_date + "T00:00:00");
+                              return d.toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+                            })()}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {confirmingTaskId !== task.id && (
+                    <span className="text-xs font-mono text-foreground-secondary flex-shrink-0">
+                      +{task.xp_value}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-2"
+          >
+            {completedTasks.length === 0 ? (
+              <p className="text-sm text-foreground-secondary py-8 text-center">
+                Brak skonczonych zadan
+              </p>
+            ) : (
+              completedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card opacity-60"
+                >
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-border flex items-center justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <span className="text-sm flex-1 truncate line-through">
+                    {task.title}
+                  </span>
+                  {task.completed_at && (
+                    <span className="text-[10px] text-foreground-secondary">
+                      {new Date(task.completed_at).toLocaleDateString("pl-PL", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

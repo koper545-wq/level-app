@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Mono, Instrument_Serif } from "next/font/google";
+import { SWRegister } from "@/components/ui/sw-register";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -39,6 +40,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -51,7 +53,10 @@ export default function RootLayout({
       lang="pl"
       className={`${dmSans.variable} ${dmMono.variable} ${instrumentSerif.variable}`}
     >
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased">
+        <SWRegister />
+        {children}
+      </body>
     </html>
   );
 }

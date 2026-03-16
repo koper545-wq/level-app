@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { Goal } from "@/types";
 import { useAreaStore } from "@/stores/area-store";
+import { useGoalStore } from "@/stores/goal-store";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -10,34 +12,106 @@ interface Props {
 
 export function GoalCard({ goal }: Props) {
   const area = goal.area || useAreaStore.getState().getAreaById(goal.area_id || "");
+  const updateGoal = useGoalStore((s) => s.updateGoal);
+  const deleteGoal = useGoalStore((s) => s.deleteGoal);
+  const [showMenu, setShowMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(goal.title);
+  const [editDesc, setEditDesc] = useState(goal.description || "");
+
+  function handleSave() {
+    if (!editTitle.trim()) return;
+    updateGoal(goal.id, { title: editTitle.trim(), description: editDesc.trim() || null });
+    setEditing(false);
+  }
+
+  function handleDelete() {
+    deleteGoal(goal.id);
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-surface border border-border rounded-card p-4 space-y-3">
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          className="w-full bg-background border border-border rounded-card px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          autoFocus
+        />
+        <textarea
+          value={editDesc}
+          onChange={(e) => setEditDesc(e.target.value)}
+          placeholder="Opis (opcjonalnie)"
+          rows={2}
+          className="w-full bg-background border border-border rounded-card px-3 py-2 text-xs focus:outline-none focus:border-accent resize-none"
+        />
+        <div className="flex gap-2">
+          <button onClick={handleSave} className="flex-1 text-xs bg-accent text-white py-2 rounded-card font-medium">Zapisz</button>
+          <button onClick={() => setEditing(false)} className="flex-1 text-xs text-foreground-secondary border border-border py-2 rounded-card">Anuluj</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
       layout
       className={`bg-surface border rounded-card p-4 ${
-        goal.is_boss
-          ? "border-accent/30 ring-1 ring-accent/10"
-          : "border-border"
+        goal.is_boss ? "border-accent/30 ring-1 ring-accent/10" : "border-border"
       }`}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {goal.is_boss && (
-            <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium uppercase">
+            <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium uppercase flex-shrink-0">
               Boss
             </span>
           )}
-          <h3 className="text-sm font-medium">{goal.title}</h3>
+          <h3 className="text-sm font-medium truncate">{goal.title}</h3>
         </div>
 
-        {area && (
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full text-white flex-shrink-0"
-            style={{ backgroundColor: area.color }}
-          >
-            {area.name}
-          </span>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {area && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full text-white"
+              style={{ backgroundColor: area.color }}
+            >
+              {area.name}
+            </span>
+          )}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1 text-foreground-secondary hover:text-foreground transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-7 z-20 bg-surface border border-border rounded-card shadow-lg py-1 min-w-[120px]">
+                  <button
+                    onClick={() => { setEditing(true); setShowMenu(false); }}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-background transition-colors"
+                  >
+                    Edytuj
+                  </button>
+                  <button
+                    onClick={() => { handleDelete(); setShowMenu(false); }}
+                    className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-background transition-colors"
+                  >
+                    Usun
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {goal.description && (
@@ -46,7 +120,6 @@ export function GoalCard({ goal }: Props) {
         </p>
       )}
 
-      {/* Progress bar */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
           <motion.div

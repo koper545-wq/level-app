@@ -59,8 +59,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border md:hidden z-50">
-      <div className="flex items-center justify-around h-16 max-w-content mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 pb-safe">
+      <div className="flex items-center justify-around h-14 max-w-content mx-auto">
         {navItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -71,7 +71,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center gap-1 py-2 px-3"
+              className="flex flex-col items-center gap-0.5 py-2 px-4 min-w-[64px] active:opacity-70 transition-opacity"
             >
               <NavIcon icon={item.icon} active={isActive} />
               <span

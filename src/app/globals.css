@@ -46,10 +46,19 @@ body {
   color: white;
 }
 
+/* Safe area utilities for iPhone notch/home indicator */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* PWA standalone mode */
 @media (display-mode: standalone) {
   body {
     -webkit-user-select: none;
     user-select: none;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }

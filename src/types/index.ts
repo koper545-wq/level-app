@@ -44,10 +44,48 @@ export interface Task {
   is_focus: boolean;
   parent_goal_id: string | null;
   sort_order: number;
+  recurrence_rule: string | null;
+  recurrence_end_date: string | null;
   created_at: string;
   completed_at: string | null;
   // Joined
   area?: Area;
+  subtasks?: Subtask[];
+}
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  is_done: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Habit {
+  id: string;
+  user_id: string;
+  title: string;
+  area_id: string | null;
+  frequency: string;
+  streak_current: number;
+  streak_longest: number;
+  last_completed_date: string | null;
+  xp_per_completion: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  // Joined
+  area?: Area;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  user_id: string;
+  date: string;
+  completed: boolean;
+  created_at: string;
 }
 
 export interface Goal {
