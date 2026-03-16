@@ -1,14 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useHabitStore } from "@/stores/habit-store";
 import { useUserStore } from "@/stores/user-store";
 import { useAreaStore } from "@/stores/area-store";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function HabitList() {
-  const habits = useHabitStore((s) => s.todayHabits());
+  const allHabits = useHabitStore((s) => s.habits);
   const todayLog = useHabitStore((s) => s.todayLog);
+
+  const habits = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    return allHabits
+      .filter((h) => {
+        if (!h.is_active) return false;
+        if (h.frequency === "daily") return true;
+        if (h.frequency === "weekdays") return dayOfWeek >= 1 && dayOfWeek <= 5;
+        return true;
+      })
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [allHabits]);
   const toggleHabit = useHabitStore((s) => s.toggleHabit);
   const addHabit = useHabitStore((s) => s.addHabit);
   const deleteHabit = useHabitStore((s) => s.deleteHabit);
