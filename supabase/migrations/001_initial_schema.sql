@@ -243,7 +243,8 @@ begin
   -- Create default 7 areas
   insert into public.areas (user_id, name, color, sort_order) values
     (new.id, 'SEATED', '#3D4FE0', 0),
-    (new.id, 'RESTAURACJE', '#C4472A', 1),
+    (new.id, 'POD PAPUGAMI', '#C4472A', 1),
+    (new.id, 'PIENO', '#F97316', 9),
     (new.id, 'WEDDING BUILDER', '#5C7A3E', 2),
     (new.id, 'ZDROWIE', '#2E7D52', 3),
     (new.id, 'RELACJE', '#B8956A', 4),

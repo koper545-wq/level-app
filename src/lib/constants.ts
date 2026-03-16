@@ -41,7 +41,8 @@ export const XP_BONUS = {
 // Default areas
 export const DEFAULT_AREAS = [
   { name: "SEATED", color: "#3D4FE0" },
-  { name: "RESTAURACJE", color: "#C4472A" },
+  { name: "POD PAPUGAMI", color: "#C4472A" },
+  { name: "PIENO", color: "#F97316" },
   { name: "WEDDING BUILDER", color: "#5C7A3E" },
   { name: "ZDROWIE", color: "#2E7D52" },
   { name: "RELACJE", color: "#B8956A" },
