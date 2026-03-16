@@ -136,6 +136,13 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
           </span>
         )}
 
+        {/* Savings badge */}
+        {!confirming && task.savings_amount > 0 && (
+          <span className="flex-shrink-0 text-[10px] font-mono text-[#C49A1A] font-medium">
+            {task.savings_amount} PLN
+          </span>
+        )}
+
         {/* XP badge */}
         {!confirming && (
           <span className="flex-shrink-0 text-xs font-mono text-foreground-secondary">

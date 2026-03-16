@@ -10,6 +10,7 @@ import { checkAndUpdateStreak } from "@/lib/streaks";
 export interface CompletionResult {
   xpEarned: number;
   coinsEarned: number;
+  savingsAdded: number;
   milestone: {
     type: "streak" | "level" | "boss";
     title: string;
@@ -86,6 +87,13 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
   useUserStore.getState().addXP(total);
   useUserStore.getState().addCoins(coins);
 
+  // Handle savings (1 PLN = 1 bonus coin)
+  const savingsAdded = task.savings_amount || 0;
+  if (savingsAdded > 0) {
+    useUserStore.getState().addSavings(savingsAdded);
+    useUserStore.getState().addCoins(savingsAdded);
+  }
+
   // Log XP
   const supabase = createClient();
   supabase
@@ -140,7 +148,7 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
     };
   }
 
-  return { xpEarned: total, coinsEarned: coins, milestone };
+  return { xpEarned: total, coinsEarned: coins, savingsAdded, milestone };
 }
 
 async function createNextRecurrence(task: Task): Promise<void> {

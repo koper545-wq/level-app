@@ -13,6 +13,7 @@ export interface User {
   streak_current: number;
   streak_longest: number;
   streak_shields: number;
+  savings_total: number;
   last_active_date: string | null;
   onboarding_completed: boolean;
   created_at: string;
@@ -44,6 +45,7 @@ export interface Task {
   is_focus: boolean;
   parent_goal_id: string | null;
   sort_order: number;
+  savings_amount: number;
   recurrence_rule: string | null;
   recurrence_end_date: string | null;
   created_at: string;

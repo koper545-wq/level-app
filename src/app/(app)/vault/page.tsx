@@ -58,6 +58,30 @@ export default function VaultPage() {
         )}
       </div>
 
+      {/* Savings Card */}
+      {user.savings_total > 0 && (
+        <div className="bg-surface border border-[#C49A1A]/30 rounded-card p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-foreground-secondary uppercase tracking-wider">
+                Zaoszczedzone
+              </p>
+              <p className="text-3xl font-mono font-medium text-[#C49A1A]">
+                {user.savings_total} <span className="text-lg">PLN</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-foreground-secondary uppercase tracking-wider">
+                Bonus coins
+              </p>
+              <p className="text-lg font-mono text-warning">
+                +{user.savings_total}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-surface border border-border rounded-card p-4 text-center">

@@ -14,6 +14,7 @@ interface TaskState {
     difficulty?: TaskDifficulty;
     scheduled_date?: string | null;
     parent_goal_id?: string | null;
+    savings_amount?: number;
   }) => Promise<Task | null>;
 
   completeTask: (taskId: string) => Promise<Task | null>;
@@ -40,7 +41,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   setTasks: (tasks) => set({ tasks }),
 
-  addTask: async ({ title, area_id, difficulty = "medium", scheduled_date, parent_goal_id }) => {
+  addTask: async ({ title, area_id, difficulty = "medium", scheduled_date, parent_goal_id, savings_amount }) => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -60,6 +61,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         coins_value: coinsValue,
         scheduled_date: scheduled_date === undefined ? today : scheduled_date,
         parent_goal_id: parent_goal_id || null,
+        savings_amount: savings_amount || 0,
         sort_order: get().tasks.length,
       })
       .select("*, area:areas(*)")

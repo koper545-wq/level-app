@@ -32,6 +32,8 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
   const [difficulty, setDifficulty] = useState<TaskDifficulty>("medium");
   const [scheduledDate, setScheduledDate] = useState<string | null>(today);
   const [recurrence, setRecurrence] = useState<string | null>(null);
+  const [savingsAmount, setSavingsAmount] = useState(0);
+  const [showSavings, setShowSavings] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +55,7 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
       area_id: areaId,
       difficulty,
       scheduled_date: scheduledDate ?? undefined,
+      savings_amount: savingsAmount > 0 ? savingsAmount : undefined,
     });
 
     // Set recurrence on the created task
@@ -66,6 +69,8 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
     setDifficulty("medium");
     setScheduledDate(today);
     setRecurrence(null);
+    setSavingsAmount(0);
+    setShowSavings(false);
     setExpanded(false);
     inputRef.current?.focus();
   }
@@ -223,6 +228,54 @@ export function QuickAdd({ autoFocus, defaultAreaId }: Props) {
                 {r.value && "♻️ "}{r.label}
               </button>
             ))}
+          </div>
+
+          {/* Savings / PLN */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (showSavings) {
+                  setSavingsAmount(0);
+                  setShowSavings(false);
+                } else {
+                  setShowSavings(true);
+                }
+              }}
+              className={`text-[11px] px-3 py-1.5 rounded-full transition-colors min-h-[36px] ${
+                savingsAmount > 0
+                  ? "bg-[#C49A1A] text-white"
+                  : "text-foreground-secondary border border-border"
+              }`}
+            >
+              {savingsAmount > 0 ? `${savingsAmount} PLN` : "Odloz PLN"}
+            </button>
+            {showSavings && (
+              <>
+                {[5, 10, 20, 50].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setSavingsAmount(amt)}
+                    className={`text-[11px] px-2.5 py-1.5 rounded-full transition-colors min-h-[36px] ${
+                      savingsAmount === amt
+                        ? "bg-[#C49A1A] text-white"
+                        : "text-foreground-secondary border border-border"
+                    }`}
+                  >
+                    {amt}
+                  </button>
+                ))}
+                <input
+                  type="number"
+                  min="1"
+                  value={savingsAmount || ""}
+                  onChange={(e) => setSavingsAmount(parseInt(e.target.value) || 0)}
+                  placeholder="..."
+                  className="w-14 text-[11px] px-2 py-1.5 rounded-full border border-border text-center bg-transparent focus:outline-none focus:border-[#C49A1A]"
+                />
+              </>
+            )}
           </div>
         </div>
       )}

@@ -9,6 +9,7 @@ interface UserState {
   addXP: (amount: number) => void;
   addCoins: (amount: number) => void;
   spendCoins: (amount: number) => boolean;
+  addSavings: (amount: number) => void;
   updateStreak: (streak: number) => void;
 }
 
@@ -77,6 +78,21 @@ export const useUserStore = create<UserState>((set, get) => ({
       .then();
 
     return true;
+  },
+
+  addSavings: (amount) => {
+    const { user } = get();
+    if (!user) return;
+
+    const newTotal = user.savings_total + amount;
+    set({ user: { ...user, savings_total: newTotal } });
+
+    const supabase = createClient();
+    supabase
+      .from("users")
+      .update({ savings_total: newTotal })
+      .eq("id", user.id)
+      .then();
   },
 
   updateStreak: (streak) => {
