@@ -67,6 +67,7 @@ create table public.goals (
   progress_percent integer not null default 0,
   xp_bonus integer not null default 1000,
   is_boss boolean not null default false,
+  milestones jsonb default '[]'::jsonb,
   season_id uuid references public.seasons(id) on delete set null,
   created_at timestamptz not null default now(),
   completed_at timestamptz

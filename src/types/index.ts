@@ -90,6 +90,13 @@ export interface HabitLog {
   created_at: string;
 }
 
+export interface GoalMilestone {
+  id: string;
+  title: string;
+  is_done: boolean;
+  completed_at: string | null;
+}
+
 export interface Goal {
   id: string;
   user_id: string;
@@ -102,6 +109,7 @@ export interface Goal {
   xp_bonus: number;
   is_boss: boolean;
   season_id: string | null;
+  milestones: GoalMilestone[];
   created_at: string;
   completed_at: string | null;
   // Joined

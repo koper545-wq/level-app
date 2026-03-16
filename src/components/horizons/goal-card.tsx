@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Goal } from "@/types";
 import { useAreaStore } from "@/stores/area-store";
 import { useGoalStore } from "@/stores/goal-store";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   goal: Goal;
@@ -14,10 +14,19 @@ export function GoalCard({ goal }: Props) {
   const area = goal.area || useAreaStore.getState().getAreaById(goal.area_id || "");
   const updateGoal = useGoalStore((s) => s.updateGoal);
   const deleteGoal = useGoalStore((s) => s.deleteGoal);
+  const addMilestone = useGoalStore((s) => s.addMilestone);
+  const toggleMilestone = useGoalStore((s) => s.toggleMilestone);
+  const deleteMilestone = useGoalStore((s) => s.deleteMilestone);
   const [showMenu, setShowMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(goal.title);
   const [editDesc, setEditDesc] = useState(goal.description || "");
+  const [expanded, setExpanded] = useState(false);
+  const [newMilestone, setNewMilestone] = useState("");
+
+  const milestones = goal.milestones || [];
+  const milestonesDone = milestones.filter((m) => m.is_done).length;
+  const milestonesTotal = milestones.length;
 
   function handleSave() {
     if (!editTitle.trim()) return;
@@ -142,6 +151,85 @@ export function GoalCard({ goal }: Props) {
           Termin: {new Date(goal.target_date).toLocaleDateString("pl-PL")}
         </p>
       )}
+
+      {/* Milestones toggle */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full mt-3 pt-2 border-t border-border/50 text-[10px] text-foreground-secondary hover:text-foreground transition-colors flex items-center justify-center gap-1"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        {milestonesTotal > 0 ? `Milestony (${milestonesDone}/${milestonesTotal})` : "Dodaj milestony"}
+      </button>
+
+      {/* Milestones list */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-2 space-y-1.5">
+              {milestones.map((ms) => (
+                <div key={ms.id} className="flex items-center gap-2 group">
+                  <button
+                    onClick={() => toggleMilestone(goal.id, ms.id)}
+                    className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${
+                      ms.is_done
+                        ? "border-success bg-success text-white"
+                        : "border-border hover:border-accent"
+                    }`}
+                  >
+                    {ms.is_done && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                  <span className={`text-xs flex-1 ${ms.is_done ? "line-through text-foreground-secondary" : ""}`}>
+                    {ms.title}
+                  </span>
+                  {ms.completed_at && (
+                    <span className="text-[9px] text-foreground-secondary/50">
+                      {new Date(ms.completed_at).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => deleteMilestone(goal.id, ms.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 text-foreground-secondary/30 hover:text-red-500 transition-all"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newMilestone.trim()) return;
+                  addMilestone(goal.id, newMilestone.trim());
+                  setNewMilestone("");
+                }}
+                className="flex items-center gap-2 pt-1"
+              >
+                <span className="text-foreground-secondary text-xs">+</span>
+                <input
+                  type="text"
+                  value={newMilestone}
+                  onChange={(e) => setNewMilestone(e.target.value)}
+                  placeholder="Dodaj milestone..."
+                  className="flex-1 text-xs bg-transparent placeholder:text-foreground-secondary/50 focus:outline-none"
+                />
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

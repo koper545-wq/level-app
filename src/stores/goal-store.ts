@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Goal } from "@/types";
+import type { Goal, GoalMilestone } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 
 interface GoalState {
@@ -18,6 +18,11 @@ interface GoalState {
   updateGoal: (goalId: string, updates: Partial<Goal>) => void;
   deleteGoal: (goalId: string) => void;
   updateProgress: (goalId: string) => void;
+
+  // Milestones
+  addMilestone: (goalId: string, title: string) => void;
+  toggleMilestone: (goalId: string, milestoneId: string) => void;
+  deleteMilestone: (goalId: string, milestoneId: string) => void;
 
   // Computed
   activeGoals: () => Goal[];
@@ -92,6 +97,55 @@ export const useGoalStore = create<GoalState>((set, get) => ({
             : {}),
         });
       });
+  },
+
+  addMilestone: (goalId, title) => {
+    const goal = get().goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    const newMilestone: GoalMilestone = {
+      id: crypto.randomUUID(),
+      title,
+      is_done: false,
+      completed_at: null,
+    };
+    const milestones = [...(goal.milestones || []), newMilestone];
+    set({
+      goals: get().goals.map((g) =>
+        g.id === goalId ? { ...g, milestones } : g
+      ),
+    });
+    const supabase = createClient();
+    supabase.from("goals").update({ milestones }).eq("id", goalId).then();
+  },
+
+  toggleMilestone: (goalId, milestoneId) => {
+    const goal = get().goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    const milestones = (goal.milestones || []).map((m) =>
+      m.id === milestoneId
+        ? { ...m, is_done: !m.is_done, completed_at: !m.is_done ? new Date().toISOString() : null }
+        : m
+    );
+    set({
+      goals: get().goals.map((g) =>
+        g.id === goalId ? { ...g, milestones } : g
+      ),
+    });
+    const supabase = createClient();
+    supabase.from("goals").update({ milestones }).eq("id", goalId).then();
+  },
+
+  deleteMilestone: (goalId, milestoneId) => {
+    const goal = get().goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    const milestones = (goal.milestones || []).filter((m) => m.id !== milestoneId);
+    set({
+      goals: get().goals.map((g) =>
+        g.id === goalId ? { ...g, milestones } : g
+      ),
+    });
+    const supabase = createClient();
+    supabase.from("goals").update({ milestones }).eq("id", goalId).then();
   },
 
   activeGoals: () =>
