@@ -344,6 +344,30 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
             className="overflow-hidden"
           >
             <div className="px-4 pb-3 space-y-1">
+              {/* Scheduled date */}
+              <div className="flex items-center gap-2 pb-2 mb-2 border-b border-border/50">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-secondary flex-shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span className="text-[10px] text-foreground-secondary uppercase tracking-wider font-medium">Data:</span>
+                <input
+                  type="date"
+                  value={task.scheduled_date || ""}
+                  onChange={(e) => {
+                    rescheduleTask(task.id, e.target.value || null);
+                  }}
+                  className="text-xs bg-background border border-border rounded-lg px-2 py-1 focus:outline-none focus:border-accent"
+                />
+                {task.scheduled_date && (
+                  <button
+                    onClick={() => rescheduleTask(task.id, null)}
+                    className="text-[10px] text-foreground-secondary hover:text-foreground px-1.5 py-0.5 rounded border border-border/50"
+                  >
+                    TBD
+                  </button>
+                )}
+              </div>
+
               {task.subtasks?.map((sub) => (
                 <div key={sub.id} className="flex items-center gap-2 group">
                   <button
