@@ -46,6 +46,7 @@ export interface Task {
   parent_goal_id: string | null;
   sort_order: number;
   savings_amount: number;
+  notes: string | null;
   recurrence_rule: string | null;
   recurrence_end_date: string | null;
   created_at: string;

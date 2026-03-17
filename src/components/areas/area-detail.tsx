@@ -41,6 +41,8 @@ export function AreaDetail({ areaId }: Props) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState("");
   const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
+  const [editingNotesTaskId, setEditingNotesTaskId] = useState<string | null>(null);
+  const [notesValue, setNotesValue] = useState("");
 
   const pendingTasks = useMemo(
     () => tasks.filter((t) => t.area_id === areaId && t.status === "pending"),
@@ -413,7 +415,8 @@ export function AreaDetail({ areaId }: Props) {
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}>
                           <polyline points="6 9 12 15 18 9" />
                         </svg>
-                        {subtasksTotal > 0 ? `Podzadania (${subtasksDone}/${subtasksTotal})` : "Dodaj podzadania"}
+                        {subtasksTotal > 0 ? `Podzadania (${subtasksDone}/${subtasksTotal})` : "Szczegoly"}
+                        {task.notes && <span className="text-accent" title="Ma notatke">&#128221;</span>}
                       </button>
                     )}
 
@@ -475,6 +478,60 @@ export function AreaDetail({ areaId }: Props) {
                                 className="flex-1 text-xs bg-transparent placeholder:text-foreground-secondary/50 focus:outline-none"
                               />
                             </form>
+
+                            {/* Notes / Links */}
+                            <div className="pt-2 mt-2 border-t border-border/50">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium">Notatki / Linki</span>
+                                {editingNotesTaskId !== task.id && (
+                                  <button
+                                    onClick={() => { setNotesValue(task.notes || ""); setEditingNotesTaskId(task.id); }}
+                                    className="text-[10px] text-accent"
+                                  >
+                                    {task.notes ? "Edytuj" : "Dodaj"}
+                                  </button>
+                                )}
+                              </div>
+                              {editingNotesTaskId === task.id ? (
+                                <div className="space-y-1.5">
+                                  <textarea
+                                    value={notesValue}
+                                    onChange={(e) => setNotesValue(e.target.value)}
+                                    placeholder="Wpisz notatke lub wklej link..."
+                                    rows={3}
+                                    autoFocus
+                                    className="w-full text-xs bg-background border border-border rounded-lg px-2.5 py-2 focus:outline-none focus:border-accent resize-none"
+                                  />
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      onClick={() => {
+                                        const trimmed = notesValue.trim();
+                                        updateTask(task.id, { notes: trimmed || null });
+                                        setEditingNotesTaskId(null);
+                                      }}
+                                      className="text-[10px] text-accent font-medium px-2 py-0.5 rounded bg-accent/10"
+                                    >
+                                      Zapisz
+                                    </button>
+                                    <button onClick={() => setEditingNotesTaskId(null)} className="text-[10px] text-foreground-secondary px-2 py-0.5">Anuluj</button>
+                                  </div>
+                                </div>
+                              ) : task.notes ? (
+                                <div className="text-xs text-foreground-secondary whitespace-pre-wrap break-words">
+                                  {task.notes.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                                    /^https?:\/\//.test(part) ? (
+                                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-accent underline break-all">
+                                        {part}
+                                      </a>
+                                    ) : (
+                                      <span key={i}>{part}</span>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-foreground-secondary/50 italic">Brak notatek</p>
+                              )}
+                            </div>
                           </div>
                         </motion.div>
                       )}
