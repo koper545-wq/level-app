@@ -57,6 +57,7 @@ export function QuestBoard() {
   const [showVictory, setShowVictory] = useState(false);
   const [completedToday, setCompletedToday] = useState(0);
   const [milestoneData, setMilestoneData] = useState<CompletionResult["milestone"]>(null);
+  const [showAllQueue, setShowAllQueue] = useState(false);
   const tryTriggerBonus = useBonusQuestStore((s) => s.tryTrigger);
 
   // Try to trigger bonus quest on mount
@@ -116,15 +117,32 @@ export function QuestBoard() {
       )}
 
       {/* Task Queue */}
-      {visibleQueue.length > 0 && (
-        <TaskQueue tasks={visibleQueue} onComplete={handleTaskComplete} />
+      {(showAllQueue ? queueTasks : visibleQueue).length > 0 && (
+        <TaskQueue tasks={showAllQueue ? queueTasks : visibleQueue} onComplete={handleTaskComplete} />
       )}
 
-      {/* Overflow indicator */}
+      {/* Overflow indicator / toggle */}
       {overflowCount > 0 && (
-        <p className="text-center text-sm text-foreground-secondary mt-3">
-          i jeszcze {overflowCount} {overflowCount === 1 ? "zadanie" : "zadan"} w kolejce
-        </p>
+        <button
+          onClick={() => setShowAllQueue(!showAllQueue)}
+          className="w-full text-center text-sm text-foreground-secondary mt-3 hover:text-foreground transition-colors flex items-center justify-center gap-1"
+        >
+          {showAllQueue ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              Zwiń kolejke
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              i jeszcze {overflowCount} {overflowCount === 1 ? "zadanie" : "zadan"} w kolejce
+            </>
+          )}
+        </button>
       )}
 
       {/* Quick Add */}
