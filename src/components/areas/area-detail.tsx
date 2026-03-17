@@ -7,6 +7,7 @@ import { useGoalStore } from "@/stores/goal-store";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { QuickAdd } from "@/components/quest-board/quick-add";
+import { handleTaskCompletion } from "@/lib/complete-task";
 
 const AREA_COLORS = [
   "#3D4FE0", "#C4472A", "#5C7A3E", "#2E7D52", "#B8956A",
@@ -23,8 +24,6 @@ export function AreaDetail({ areaId }: Props) {
   const updateArea = useAreaStore((s) => s.updateArea);
   const tasks = useTaskStore((s) => s.tasks);
   const goals = useGoalStore((s) => s.goals);
-  const completeTask = useTaskStore((s) => s.completeTask);
-
   const addSubtask = useTaskStore((s) => s.addSubtask);
   const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
   const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
@@ -89,7 +88,10 @@ export function AreaDetail({ areaId }: Props) {
   function handleTaskClick(taskId: string) {
     if (confirmingTaskId === taskId) {
       setConfirmingTaskId(null);
-      completeTask(taskId);
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        handleTaskCompletion(task);
+      }
     } else {
       setConfirmingTaskId(taskId);
       setTimeout(() => setConfirmingTaskId((prev) => (prev === taskId ? null : prev)), 2500);
