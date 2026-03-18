@@ -8,9 +8,12 @@ import { TaskCard } from "./task-card";
 interface Props {
   tasks: Task[];
   onComplete: (xpEarned: number, milestone: CompletionResult["milestone"]) => void;
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelect?: (id: string) => void;
 }
 
-export function TaskQueue({ tasks, onComplete }: Props) {
+export function TaskQueue({ tasks, onComplete, selectable, selectedIds, onSelect }: Props) {
   async function handleComplete(task: Task) {
     const result = await handleTaskCompletion(task);
     if (result) {
@@ -31,6 +34,9 @@ export function TaskQueue({ tasks, onComplete }: Props) {
               task={task}
               variant="queue"
               onComplete={() => handleComplete(task)}
+              selectable={selectable}
+              selected={selectedIds?.includes(task.id)}
+              onSelect={() => onSelect?.(task.id)}
             />
           ))}
         </AnimatePresence>

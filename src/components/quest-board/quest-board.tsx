@@ -15,6 +15,10 @@ import { MilestoneOverlay } from "@/components/ui/milestone-overlay";
 import { MAX_VISIBLE_TASKS } from "@/lib/constants";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useBonusQuestStore } from "@/stores/bonus-quest-store";
+import { useSessionStore } from "@/stores/session-store";
+import { SessionSelector } from "./session-selector";
+import { SessionMode } from "./session-mode";
+import { SessionSummary } from "./session-summary";
 import type { CompletionResult } from "@/lib/complete-task";
 
 export function QuestBoard() {
@@ -59,6 +63,11 @@ export function QuestBoard() {
   const [milestoneData, setMilestoneData] = useState<CompletionResult["milestone"]>(null);
   const [showAllQueue, setShowAllQueue] = useState(false);
   const tryTriggerBonus = useBonusQuestStore((s) => s.tryTrigger);
+  const sessionPhase = useSessionStore((s) => s.phase);
+  const selectedTaskIds = useSessionStore((s) => s.selectedTaskIds);
+  const toggleTask = useSessionStore((s) => s.toggleTask);
+  const startSelecting = useSessionStore((s) => s.startSelecting);
+  const isSelecting = sessionPhase === "selecting";
 
   // Try to trigger bonus quest on mount
   useEffect(() => {
@@ -90,6 +99,16 @@ export function QuestBoard() {
   const visibleQueue = queueTasks.slice(0, MAX_VISIBLE_TASKS - 1);
   const overflowCount = Math.max(0, queueTasks.length - visibleQueue.length);
 
+  // Session active — show only session view
+  if (sessionPhase === "active") {
+    return <SessionMode />;
+  }
+
+  // Session summary
+  if (sessionPhase === "summary") {
+    return <SessionSummary />;
+  }
+
   // Empty state (no tasks today AND no overdue)
   if (todayTasks.length === 0 && overdueTasks.length === 0 && completedToday === 0) {
     return (
@@ -105,24 +124,39 @@ export function QuestBoard() {
 
   return (
     <div className="pb-8">
+      {/* Session Selector */}
+      {isSelecting && <SessionSelector />}
+
       {/* Bonus Quest Banner */}
-      <BonusQuestBanner />
+      {!isSelecting && <BonusQuestBanner />}
 
       {/* Overdue tasks */}
-      <OverdueTasks tasks={overdueTasks} />
+      {!isSelecting && <OverdueTasks tasks={overdueTasks} />}
 
       {/* Focus Task */}
       {focusTask && (
-        <FocusTask task={focusTask} onComplete={handleTaskComplete} />
+        <FocusTask
+          task={focusTask}
+          onComplete={handleTaskComplete}
+          selectable={isSelecting}
+          selected={selectedTaskIds.includes(focusTask.id)}
+          onSelect={() => toggleTask(focusTask.id)}
+        />
       )}
 
-      {/* Task Queue */}
-      {(showAllQueue ? queueTasks : visibleQueue).length > 0 && (
-        <TaskQueue tasks={showAllQueue ? queueTasks : visibleQueue} onComplete={handleTaskComplete} />
+      {/* Task Queue — show all tasks when selecting */}
+      {(isSelecting ? queueTasks : showAllQueue ? queueTasks : visibleQueue).length > 0 && (
+        <TaskQueue
+          tasks={isSelecting ? queueTasks : showAllQueue ? queueTasks : visibleQueue}
+          onComplete={handleTaskComplete}
+          selectable={isSelecting}
+          selectedIds={selectedTaskIds}
+          onSelect={toggleTask}
+        />
       )}
 
       {/* Overflow indicator / toggle */}
-      {overflowCount > 0 && (
+      {!isSelecting && overflowCount > 0 && (
         <button
           onClick={() => setShowAllQueue(!showAllQueue)}
           className="w-full text-center text-sm text-foreground-secondary mt-3 hover:text-foreground transition-colors flex items-center justify-center gap-1"
@@ -145,16 +179,31 @@ export function QuestBoard() {
         </button>
       )}
 
+      {/* Session start button (when not selecting) */}
+      {!isSelecting && todayTasks.length >= 2 && (
+        <button
+          onClick={startSelecting}
+          className="w-full mt-4 py-2.5 rounded-xl text-xs font-medium border border-accent/30 text-accent hover:bg-accent/5 transition-all flex items-center justify-center gap-2"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+          </svg>
+          Tryb sesji
+        </button>
+      )}
+
       {/* Quick Add */}
-      <div className="mt-6">
-        <QuickAdd />
-      </div>
+      {!isSelecting && (
+        <div className="mt-6">
+          <QuickAdd />
+        </div>
+      )}
 
       {/* Backlog / TBD tasks */}
-      <BacklogTasks tasks={backlogTasks} onComplete={handleTaskComplete} />
+      {!isSelecting && <BacklogTasks tasks={backlogTasks} onComplete={handleTaskComplete} />}
 
       {/* Habits */}
-      <HabitList />
+      {!isSelecting && <HabitList />}
 
       {/* Daily Summary Bar */}
       <DailySummaryBar completedToday={completedToday} />

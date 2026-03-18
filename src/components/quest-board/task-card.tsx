@@ -10,9 +10,12 @@ interface Props {
   task: Task;
   variant?: "focus" | "queue";
   onComplete: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
-export function TaskCard({ task, variant = "queue", onComplete }: Props) {
+export function TaskCard({ task, variant = "queue", onComplete, selectable, selected, onSelect }: Props) {
   const area = task.area || useAreaStore.getState().getAreaById(task.area_id || "");
   const postponeTask = useTaskStore((s) => s.postponeTask);
   const rescheduleTask = useTaskStore((s) => s.rescheduleTask);
@@ -102,42 +105,53 @@ export function TaskCard({ task, variant = "queue", onComplete }: Props) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20, transition: { duration: 0.15 } }}
       className={`
-        bg-surface border border-border rounded-card overflow-hidden
-        ${variant === "focus" ? "ring-1 ring-accent/20" : ""}
+        bg-surface border rounded-card overflow-hidden transition-all
+        ${selected ? "border-accent ring-1 ring-accent/20" : "border-border"}
+        ${variant === "focus" && !selected ? "ring-1 ring-accent/20" : ""}
       `}
     >
       <div className="flex items-center gap-3 p-4">
-        {/* Checkbox — two-tap to complete */}
-        <button
-          onClick={handleClick}
-          className={`
-            flex-shrink-0 w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center
-            ${
-              confirming
-                ? "border-success bg-success/20 scale-110"
-                : variant === "focus"
-                ? "border-accent hover:border-accent hover:bg-accent/10 active:bg-accent/20"
-                : "border-border hover:border-accent active:bg-accent/20"
-            }
-          `}
-          aria-label={confirming ? "Potwierdz ukonczone" : "Ukoncz zadanie"}
-        >
-          {confirming && (
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-success"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          )}
-        </button>
+        {/* Checkbox — selectable mode or two-tap complete */}
+        {selectable ? (
+          <button
+            onClick={onSelect}
+            className={`
+              flex-shrink-0 w-8 h-8 rounded-lg border-2 transition-all duration-200 flex items-center justify-center
+              ${selected
+                ? "border-accent bg-accent text-white"
+                : "border-border hover:border-accent"
+              }
+            `}
+            aria-label={selected ? "Odznacz" : "Zaznacz do sesji"}
+          >
+            {selected && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={handleClick}
+            className={`
+              flex-shrink-0 w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center
+              ${
+                confirming
+                  ? "border-success bg-success/20 scale-110"
+                  : variant === "focus"
+                  ? "border-accent hover:border-accent hover:bg-accent/10 active:bg-accent/20"
+                  : "border-border hover:border-accent active:bg-accent/20"
+              }
+            `}
+            aria-label={confirming ? "Potwierdz ukonczone" : "Ukoncz zadanie"}
+          >
+            {confirming && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-success">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
