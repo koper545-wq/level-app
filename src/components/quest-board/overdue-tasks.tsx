@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useTaskStore } from "@/stores/task-store";
 import { useAreaStore } from "@/stores/area-store";
+import { handleTaskCompletion } from "@/lib/complete-task";
 import type { Task } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,7 +23,6 @@ interface OverdueTaskItemProps {
 
 function OverdueTaskItem({ task }: OverdueTaskItemProps) {
   const rescheduleTask = useTaskStore((s) => s.rescheduleTask);
-  const completeTask = useTaskStore((s) => s.completeTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const area = useAreaStore.getState().getAreaById(task.area_id || "");
   const [showOptions, setShowOptions] = useState(false);
@@ -41,7 +41,7 @@ function OverdueTaskItem({ task }: OverdueTaskItemProps) {
   }
 
   function handleComplete() {
-    completeTask(task.id);
+    handleTaskCompletion(task);
     setShowOptions(false);
   }
 

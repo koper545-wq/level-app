@@ -56,11 +56,17 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
   const completed = await useTaskStore.getState().completeTask(task.id);
   if (!completed) return null;
 
-  // Check XP bonus conditions
-  const [firstTask, neglectedArea] = await Promise.all([
-    isFirstTaskToday(user.id),
-    isAreaNeglected(task.area_id, user.id),
-  ]);
+  // Check XP bonus conditions (don't let failures block XP)
+  let firstTask = false;
+  let neglectedArea = false;
+  try {
+    [firstTask, neglectedArea] = await Promise.all([
+      isFirstTaskToday(user.id),
+      isAreaNeglected(task.area_id, user.id),
+    ]);
+  } catch {
+    // Supabase query failed — continue with base XP
+  }
 
   const oldXP = user.xp_total;
   const oldLevel = getLevelForXP(oldXP);
@@ -75,15 +81,19 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
   });
 
   // Apply bonus quest multiplier
-  const isBonusQuest = useBonusQuestStore.getState().isTaskBonus(task.id);
-  if (isBonusQuest) {
-    total = total * useBonusQuestStore.getState().multiplier;
-    useBonusQuestStore.getState().clearQuest();
+  try {
+    const isBonusQuest = useBonusQuestStore.getState().isTaskBonus(task.id);
+    if (isBonusQuest) {
+      total = total * useBonusQuestStore.getState().multiplier;
+      useBonusQuestStore.getState().clearQuest();
+    }
+  } catch {
+    // Bonus quest store not ready — skip
   }
 
   const coins = coinsForXP(total);
 
-  // Update stores
+  // Update stores — this is the critical part, must not fail
   useUserStore.getState().addXP(total);
   useUserStore.getState().addCoins(coins);
 
@@ -94,7 +104,7 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
     useUserStore.getState().addCoins(savingsAdded);
   }
 
-  // Log XP
+  // Log XP (fire-and-forget)
   const supabase = createClient();
   supabase
     .from("xp_log")
@@ -106,19 +116,35 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
     })
     .then();
 
-  // Update streak
-  const { newStreak, milestone: streakMilestone } = await checkAndUpdateStreak(user.id);
-  useUserStore.getState().updateStreak(newStreak);
+  // Update streak (non-critical — don't let it block return)
+  let newStreak = user.streak_current;
+  let streakMilestone: number | null = null;
+  try {
+    const streakResult = await checkAndUpdateStreak(user.id);
+    newStreak = streakResult.newStreak;
+    streakMilestone = streakResult.milestone;
+    useUserStore.getState().updateStreak(newStreak);
+  } catch {
+    // Streak update failed — XP already awarded
+  }
 
   // Update goal progress if task belongs to a goal
   if (task.parent_goal_id) {
-    const { useGoalStore } = await import("@/stores/goal-store");
-    useGoalStore.getState().updateProgress(task.parent_goal_id);
+    try {
+      const { useGoalStore } = await import("@/stores/goal-store");
+      useGoalStore.getState().updateProgress(task.parent_goal_id);
+    } catch {
+      // Goal update failed
+    }
   }
 
   // Create next recurring task if applicable
   if (task.recurrence_rule) {
-    await createNextRecurrence(task);
+    try {
+      await createNextRecurrence(task);
+    } catch {
+      // Recurrence failed
+    }
   }
 
   // Check milestones
@@ -133,7 +159,6 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
       xp: newStreak * 10,
       coins: newStreak * 5,
     };
-    // Award milestone bonus
     useUserStore.getState().addXP(newStreak * 10);
     useUserStore.getState().addCoins(newStreak * 5);
   }
