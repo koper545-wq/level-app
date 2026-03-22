@@ -8,9 +8,32 @@ interface UserState {
   setUser: (user: User) => void;
   addXP: (amount: number) => void;
   addCoins: (amount: number) => void;
+  addRewards: (params: { xp: number; coins: number; savings?: number }) => void;
   spendCoins: (amount: number) => boolean;
   addSavings: (amount: number) => void;
   updateStreak: (streak: number) => void;
+}
+
+// Debounced persist: collect all changes, flush once
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingUpdate: Record<string, number | string> = {};
+let pendingUserId: string | null = null;
+
+function flushPersist() {
+  if (!pendingUserId || Object.keys(pendingUpdate).length === 0) return;
+  const supabase = createClient();
+  const update = { ...pendingUpdate };
+  const userId = pendingUserId;
+  pendingUpdate = {};
+  pendingUserId = null;
+  supabase.from("users").update(update).eq("id", userId).then();
+}
+
+function schedulePersist(userId: string, fields: Record<string, number | string>) {
+  pendingUserId = userId;
+  Object.assign(pendingUpdate, fields);
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(flushPersist, 100);
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -26,26 +49,20 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newXPSeason = user.xp_season + amount;
     const newLevel = getLevelForXP(newXPTotal);
 
-    const updated = {
-      ...user,
-      xp_total: newXPTotal,
-      xp_season: newXPSeason,
-      level: newLevel,
-    };
-
-    set({ user: updated });
-
-    // Persist to Supabase
-    const supabase = createClient();
-    supabase
-      .from("users")
-      .update({
+    set({
+      user: {
+        ...user,
         xp_total: newXPTotal,
         xp_season: newXPSeason,
         level: newLevel,
-      })
-      .eq("id", user.id)
-      .then();
+      },
+    });
+
+    schedulePersist(user.id, {
+      xp_total: newXPTotal,
+      xp_season: newXPSeason,
+      level: newLevel,
+    });
   },
 
   addCoins: (amount) => {
@@ -55,12 +72,37 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newCoins = user.coins + amount;
     set({ user: { ...user, coins: newCoins } });
 
-    const supabase = createClient();
-    supabase
-      .from("users")
-      .update({ coins: newCoins })
-      .eq("id", user.id)
-      .then();
+    schedulePersist(user.id, { coins: newCoins });
+  },
+
+  addRewards: ({ xp, coins, savings }) => {
+    const { user } = get();
+    if (!user) return;
+
+    const newXPTotal = user.xp_total + xp;
+    const newXPSeason = user.xp_season + xp;
+    const newLevel = getLevelForXP(newXPTotal);
+    const newCoins = user.coins + coins;
+    const newSavings = user.savings_total + (savings || 0);
+
+    set({
+      user: {
+        ...user,
+        xp_total: newXPTotal,
+        xp_season: newXPSeason,
+        level: newLevel,
+        coins: newCoins,
+        savings_total: newSavings,
+      },
+    });
+
+    schedulePersist(user.id, {
+      xp_total: newXPTotal,
+      xp_season: newXPSeason,
+      level: newLevel,
+      coins: newCoins,
+      savings_total: newSavings,
+    });
   },
 
   spendCoins: (amount) => {
@@ -70,12 +112,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newCoins = user.coins - amount;
     set({ user: { ...user, coins: newCoins } });
 
-    const supabase = createClient();
-    supabase
-      .from("users")
-      .update({ coins: newCoins })
-      .eq("id", user.id)
-      .then();
+    schedulePersist(user.id, { coins: newCoins });
 
     return true;
   },
@@ -87,12 +124,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newTotal = user.savings_total + amount;
     set({ user: { ...user, savings_total: newTotal } });
 
-    const supabase = createClient();
-    supabase
-      .from("users")
-      .update({ savings_total: newTotal })
-      .eq("id", user.id)
-      .then();
+    schedulePersist(user.id, { savings_total: newTotal });
   },
 
   updateStreak: (streak) => {
@@ -107,15 +139,10 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     set({ user: updated });
 
-    const supabase = createClient();
-    supabase
-      .from("users")
-      .update({
-        streak_current: streak,
-        streak_longest: updated.streak_longest,
-        last_active_date: new Date().toISOString().split("T")[0],
-      })
-      .eq("id", user.id)
-      .then();
+    schedulePersist(user.id, {
+      streak_current: streak,
+      streak_longest: updated.streak_longest,
+      last_active_date: new Date().toISOString().split("T")[0],
+    });
   },
 }));

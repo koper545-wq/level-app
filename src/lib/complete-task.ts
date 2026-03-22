@@ -93,16 +93,16 @@ export async function handleTaskCompletion(task: Task): Promise<CompletionResult
 
   const coins = coinsForXP(total);
 
-  // Update stores — this is the critical part, must not fail
-  useUserStore.getState().addXP(total);
-  useUserStore.getState().addCoins(coins);
-
   // Handle savings (1 PLN = 1 bonus coin)
   const savingsAdded = task.savings_amount || 0;
-  if (savingsAdded > 0) {
-    useUserStore.getState().addSavings(savingsAdded);
-    useUserStore.getState().addCoins(savingsAdded);
-  }
+  const totalCoins = coins + savingsAdded;
+
+  // Update stores in ONE call — prevents Supabase race conditions
+  useUserStore.getState().addRewards({
+    xp: total,
+    coins: totalCoins,
+    savings: savingsAdded,
+  });
 
   // Log XP (fire-and-forget)
   const supabase = createClient();
